@@ -1,0 +1,321 @@
+{
+  "name": "Phase 10 – Bulk Content Calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Phase 10 – Bulk Content Calendar\nAdds every scripted video to the **Content Calendar** with a status: thumbnail ready → Production, no thumbnail yet → Script Ready + Thumbnail Required. Protected statuses (Production, Ready to Publish, Published, Failed) are never overwritten. No AI calls.",
+        "height": 170,
+        "width": 680,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -260
+      ],
+      "id": "f162b084-86f8-44f6-9dfe-c9a40b9963c0",
+      "name": "Sticky – Note"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        0
+      ],
+      "id": "58063be4-3e93-406d-aded-333366122c3f",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1619617689,
+          "mode": "list",
+          "cachedResultName": "Scripts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1619617689"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -776,
+        0
+      ],
+      "id": "9c45da6f-1c77-4658-bb03-195661d52a6f",
+      "name": "Read Scripts",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 568388382,
+          "mode": "list",
+          "cachedResultName": "Thumbnails",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=568388382"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -552,
+        0
+      ],
+      "id": "aa822023-09c2-41ab-9d91-3ff1b70399e2",
+      "name": "Read Thumbnails",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 11738224,
+          "mode": "list",
+          "cachedResultName": "Content Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=11738224"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -328,
+        0
+      ],
+      "id": "319b6135-a229-4fd3-83d6-5ff60f4bdc58",
+      "name": "Read Content Calendar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Adds every scripted video to the Content Calendar and sets its status.\n// Protected statuses (set manually or by later steps) are never overwritten.\nconst PROTECTED = ['Production', 'Ready to Publish', 'Published', 'Failed'];\nconst hasThumb = new Set($('Read Thumbnails').all().map(i => i.json['Video ID']).filter(Boolean));\nconst calendar = {};\nfor (const i of $('Read Content Calendar').all()) {\n  if (i.json['Video ID']) calendar[i.json['Video ID']] = i.json;\n}\nconst seen = new Set();\nconst out = [];\nlet n = 0;\nfor (const item of $('Read Scripts').all()) {\n  const id = item.json['Video ID'];\n  if (!id || !item.json['Script'] || seen.has(id)) continue;\n  seen.add(id);\n  const existing = calendar[id];\n  if (existing && PROTECTED.includes(existing['Video Status'])) continue;\n  const thumb = hasThumb.has(id);\n  n += 1;\n  out.push({ json: {\n    'Video ID': id,\n    'Title': item.json['Title'],\n    'Script Status': 'Script Ready',\n    'Thumbnail Status': thumb ? 'Concept Ready' : 'Thumbnail Required',\n    'Video Status': thumb ? 'Production' : 'Script Ready',\n    'Publish Date': (existing && existing['Publish Date']) ? existing['Publish Date'] : $now.plus({ days: 2 + n }).toFormat('yyyy-MM-dd'),\n    'Notes': 'Phase 10 bulk add ' + $now.toFormat('yyyy-MM-dd HH:mm') + ': ' + (thumb ? 'script and thumbnail concept ready, moved to production' : 'script ready, thumbnail required') + ' (fictional publish date)'\n  }});\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -104,
+        0
+      ],
+      "id": "402a5af7-479f-4183-979d-fee7fe8ba3a0",
+      "name": "Build Calendar Rows"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 11738224,
+          "mode": "list",
+          "cachedResultName": "Content Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=11738224"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Script Status",
+              "displayName": "Script Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail Status",
+              "displayName": "Thumbnail Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Status",
+              "displayName": "Video Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        120,
+        0
+      ],
+      "id": "940ec729-43ac-4600-900e-6d524756ece1",
+      "name": "Add to Content Calendar",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Read Scripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Scripts": {
+      "main": [
+        [
+          {
+            "node": "Read Thumbnails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Thumbnails": {
+      "main": [
+        [
+          {
+            "node": "Read Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Build Calendar Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calendar Rows": {
+      "main": [
+        [
+          {
+            "node": "Add to Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

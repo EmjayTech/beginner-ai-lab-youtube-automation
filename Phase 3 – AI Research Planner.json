@@ -1,0 +1,407 @@
+{
+  "name": "Phase 3 – AI Research Planner",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d8365266-b61d-4b11-a0c9-922954d4b958",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8353dda7-48eb-4d13-b88a-daa451e9c278",
+              "name": "selected_ids",
+              "value": "VID-009",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c93bdc91-2f68-462f-963c-a8b373d4d50d",
+      "name": "Set Selected Videos"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Video Ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "73e6beb0-9fb2-4220-ac84-b41d2492ec41",
+      "name": "Read Video Ideas:",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $('Set Selected Videos').first().json.selected_ids\n  .split(',')\n  .map(s => s.trim())\n  .filter(Boolean);\n\nreturn $input.all().filter(item => ids.includes(item.json['Video ID']));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "48a745bc-ebce-423a-a5a5-7e028dfc9cbf",
+      "name": "Select Ideas"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a YouTube content researcher for a fictional beginner-focused channel called \"Beginner AI Lab\".\nThe audience is students and beginners with no technical background.\n\nCreate a research and content plan for this video idea:\n\nTitle: {{ $json['Title'] }}\nTopic: {{ $json['Topic'] }}\nCategory: {{ $json['Category'] }}\nTarget audience: {{ $json['Target Audience'] }}\nIdea summary: {{ $json['Explanation'] }}\n\nProvide:\n- learning_goal: 1 to 2 sentences on what the viewer should learn or be able to do after watching\n- main_points: 4 to 6 key points the video must cover\n- viewer_questions: 4 to 6 questions beginners are likely to ask about this topic\n- intro: a short description of how the video should open and hook the viewer\n- main_content: a short description of the main teaching section, in order\n- examples: 2 to 3 simple, practical examples to show on screen\n- conclusion: a short description of how to wrap up and what to tell viewers to do next\n- verify_before_publishing: facts, features, prices, limits or claims that must be checked before publishing\n\nRules:\n- Use plain, beginner-friendly language.\n- Do not invent statistics, prices, or product features. If something may have changed or you are unsure, list it under verify_before_publishing.\n- Do not use real logos, real channel names or copyrighted content.\n\nReturn only the structured data.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        0
+      ],
+      "id": "20172710-c494-4a7f-9f46-7771ce86be00",
+      "name": "Generate Research Plan",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        240
+      ],
+      "id": "3a225e79-84e4-4ee0-b7d6-93ba35be848d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OqfcnzcL8nOwNYa4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"learning_goal\": \"Viewers learn how to write clear prompts that give better AI answers.\",\n  \"main_points\": [\"Point one\", \"Point two\", \"Point three\", \"Point four\"],\n  \"viewer_questions\": [\"Question one?\", \"Question two?\", \"Question three?\", \"Question four?\"],\n  \"intro\": \"Open with a relatable problem, then promise a simple fix.\",\n  \"main_content\": \"Walk through the steps in order, with one demo per step.\",\n  \"examples\": [\"Example one\", \"Example two\"],\n  \"conclusion\": \"Recap the key steps and invite viewers to try one prompt today.\",\n  \"verify_before_publishing\": [\"Check any tool features or limits mentioned\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        240
+      ],
+      "id": "3ca05428-010e-427a-a7a3-7444c78990e5",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ideas = $('Select Ideas').all();\nconst today = $now.toFormat('yyyy-MM-dd');\n\nconst bullets = (arr) =>\n  Array.isArray(arr) ? arr.map(x => '• ' + x).join('\\n') : String(arr || '');\n\nreturn $input.all().map((item, i) => {\n  const out = item.json.output;\n  const idea = ideas[i].json;\n  return {\n    json: {\n      'Video ID': idea['Video ID'],\n      'Title': idea['Title'],\n      'Learning Goal': out.learning_goal,\n      'Main Points': bullets(out.main_points),\n      'Viewer Questions': bullets(out.viewer_questions),\n      'Intro': out.intro,\n      'Main Content': out.main_content,\n      'Examples': bullets(out.examples),\n      'Conclusion': out.conclusion,\n      'To Verify': bullets(out.verify_before_publishing),\n      'Status': 'Researched',\n      'Date Created': today\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "4c096056-9302-4e80-9d28-a462a7236863",
+      "name": "Format Research Rows"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1492571919,
+          "mode": "list",
+          "cachedResultName": "Content Research",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1492571919"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Learning Goal",
+              "displayName": "Learning Goal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Main Points",
+              "displayName": "Main Points",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Viewer Questions",
+              "displayName": "Viewer Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intro",
+              "displayName": "Intro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Main Content",
+              "displayName": "Main Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Examples",
+              "displayName": "Examples",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conclusion",
+              "displayName": "Conclusion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "To Verify",
+              "displayName": "To Verify",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Created",
+              "displayName": "Date Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "5feaf8db-3191-4deb-8e10-2fe890734615",
+      "name": "Save Research to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Set Selected Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Selected Videos": {
+      "main": [
+        [
+          {
+            "node": "Read Video Ideas:",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Video Ideas:": {
+      "main": [
+        [
+          {
+            "node": "Select Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Ideas": {
+      "main": [
+        [
+          {
+            "node": "Generate Research Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Research Plan",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Research Plan",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Research Plan": {
+      "main": [
+        [
+          {
+            "node": "Format Research Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Research Rows": {
+      "main": [
+        [
+          {
+            "node": "Save Research to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "573ab1fd-6707-4e2a-9cce-ddc8b56b1ef2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "UDsAYtva5TPDwTds",
+  "tags": []
+}

@@ -1,0 +1,428 @@
+{
+  "name": "Phase 8 – AI Performance Analyzer",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4e2f7535-35e4-4239-9928-7ef4e92cbc09",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1362314584,
+          "mode": "list",
+          "cachedResultName": "Video Performance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1362314584"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "95e9aae4-b102-4c27-a3c0-1b2fd8335349",
+      "name": "Read Video Performance",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Video Ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "12c10ed4-1a33-4f0b-bcd1-056c299c1759",
+      "name": "Read Video Ideas",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const num = v => parseFloat(String(v ?? '').replace(/[%,\\s]/g, '')) || 0;\nconst round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;\n\nconst perf = $('Read Video Performance').all().map(i => i.json).filter(r => r['Video ID']);\nconst ideas = $('Read Video Ideas').all().map(i => i.json);\n\nconst info = {};\nfor (const r of ideas) info[r['Video ID']] = r;\n\nconst videos = perf.map(r => {\n  const views = num(r['Views']), likes = num(r['Likes']), comments = num(r['Comments']);\n  const hours = num(r['Watch Time']), subs = num(r['Subscribers Gained']);\n  const meta = info[r['Video ID']] || {};\n  return {\n    video_id: r['Video ID'],\n    title: meta['Title'] || 'Unknown title',\n    topic: meta['Topic'] || 'Unknown',\n    category: meta['Category'] || 'Unknown',\n    views, likes, comments,\n    watch_hours: hours,\n    ctr_percent: num(r['CTR']),\n    subscribers_gained: subs,\n    engagement_rate: views ? round((likes + comments) / views * 100) : 0,\n    avg_minutes_watched_per_view: views ? round(hours * 60 / views) : 0,\n    subs_per_1000_views: views ? round(subs / views * 1000) : 0\n  };\n});\n\nconst sum = (list, k) => list.reduce((s, v) => s + v[k], 0);\n\nconst group = key => {\n  const g = {};\n  for (const v of videos) (g[v[key]] = g[v[key]] || []).push(v);\n  return Object.entries(g).map(([name, list]) => ({\n    name,\n    videos: list.length,\n    avg_views: round(sum(list, 'views') / list.length, 0),\n    avg_engagement_rate: round(sum(list, 'engagement_rate') / list.length),\n    avg_ctr_percent: round(sum(list, 'ctr_percent') / list.length),\n    low_sample: list.length < 2\n  })).sort((a, b) => b.avg_engagement_rate - a.avg_engagement_rate);\n};\n\nconst n = videos.length || 1;\nconst stats = {\n  data_type: 'SIMULATED (fictional test data)',\n  overall: {\n    videos_analyzed: videos.length,\n    total_views: sum(videos, 'views'),\n    avg_views: round(sum(videos, 'views') / n, 0),\n    avg_engagement_rate: round(sum(videos, 'engagement_rate') / n),\n    avg_ctr_percent: round(sum(videos, 'ctr_percent') / n)\n  },\n  by_topic: group('topic'),\n  by_category: group('category'),\n  videos\n};\n\nreturn [{ json: { stats, stats_json: JSON.stringify(stats, null, 1) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "5e2d493a-120a-47a7-ac17-a4762e6f010d",
+      "name": "Calculate Metrics"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a YouTube analytics assistant for a fictional beginner-focused channel called \"Beginner AI Lab\".\n\nIMPORTANT: All data below is SIMULATED, fictional test data. Treat every result as simulated, never as real audience behaviour.\n\nPERFORMANCE DATA (already calculated, use only these numbers):\n{{ $json.stats_json }}\n\nWrite a report with:\n- overall_summary: 2 to 3 sentences on overall simulated performance\n- higher_engagement_topics: topics or categories with higher simulated engagement\n- lower_engagement_topics: topics or categories with lower simulated engagement\n- video_summaries: one short summary for EVERY video in the data (video_id and summary)\n- suggested_topics: 5 future video ideas based on the simulated patterns\n- improvements: 3 to 5 possible areas for improvement\n- data_note: one sentence stating the results are simulated\n\nRules:\n- Use ONLY the numbers provided. Do not invent figures, trends, dates or causes.\n- Every item in the topic lists, suggested_topics and improvements must include an \"evidence\" field quoting the specific metric (for example \"avg engagement 11.1% vs overall 8.9%\").\n- Be cautious: use words like \"may\" and \"suggests\". Do not state causes as facts.\n- If a group has low_sample = true, say the sample is small and do not draw firm conclusions from it.\n- Suggested topics must be original and beginner-friendly, with no real brands or copyrighted content.\n\nReturn only the structured data.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        0
+      ],
+      "id": "3c644590-0c42-49bd-b5d1-59167eb0178b",
+      "name": "Generate Insights"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        240
+      ],
+      "id": "e5c4f5f6-7bcf-45a1-a0ee-7fc030e4c95f",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OqfcnzcL8nOwNYa4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"overall_summary\": \"Simulated results show moderate engagement across the channel.\",\n  \"higher_engagement_topics\": [\n    { \"topic\": \"AI Basics\", \"evidence\": \"avg engagement 10.9% vs overall 8.6%\" }\n  ],\n  \"lower_engagement_topics\": [\n    { \"topic\": \"Comparison\", \"evidence\": \"avg engagement 5.1% vs overall 8.6%\" }\n  ],\n  \"video_summaries\": [\n    { \"video_id\": \"VID-001\", \"summary\": \"Strong views with solid engagement for its category.\" }\n  ],\n  \"suggested_topics\": [\n    { \"title\": \"Common AI Myths for Beginners, Part 2\", \"reason\": \"Myth-style explainers led engagement.\", \"evidence\": \"VID-007 engagement 10.4%\" }\n  ],\n  \"improvements\": [\n    { \"area\": \"Comparison videos\", \"suggestion\": \"Test clearer titles and thumbnails.\", \"evidence\": \"CTR 3.4% to 3.6% vs overall 5.6%\" }\n  ],\n  \"data_note\": \"All results are based on simulated data.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        240
+      ],
+      "id": "4608e49c-47a1-4aa1-b5fa-966c300380a1",
+      "name": "Structured Output Parser",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $input.first().json.output;\nconst s = $('Calculate Metrics').first().json.stats;\nconst now = $now;\n\nconst lines = (arr, fn) => (arr || []).map(x => '• ' + fn(x)).join('\\n');\n\nreturn [{\n  json: {\n    'Report ID': `RPT-${now.toFormat('yyyyMMdd-HHmm')}`,\n    'Date': now.toFormat('yyyy-MM-dd'),\n    'Data Type': 'Simulated',\n    'Videos Analyzed': s.overall.videos_analyzed,\n    'Total Views': s.overall.total_views,\n    'Avg Engagement Rate': s.overall.avg_engagement_rate + '%',\n    'Overall Summary': out.overall_summary + ' ' + (out.data_note || ''),\n    'Higher Engagement Topics': lines(out.higher_engagement_topics, t => `${t.topic}: ${t.evidence}`),\n    'Lower Engagement Topics': lines(out.lower_engagement_topics, t => `${t.topic}: ${t.evidence}`),\n    'Video Summaries': lines(out.video_summaries, v => `${v.video_id}: ${v.summary}`),\n    'Suggested Topics': lines(out.suggested_topics, t => `${t.title} (${t.reason}; ${t.evidence})`),\n    'Improvements': lines(out.improvements, i => `${i.area}: ${i.suggestion} (${i.evidence})`),\n    'Status': 'Needs Review'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "28e15b6e-be99-47ca-a35b-92df2f44cd03",
+      "name": "Format Report"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 686037600,
+          "mode": "list",
+          "cachedResultName": "Analytics Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=686037600"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Report ID",
+              "displayName": "Report ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Type",
+              "displayName": "Data Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Videos Analyzed",
+              "displayName": "Videos Analyzed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Views",
+              "displayName": "Total Views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Avg Engagement Rate",
+              "displayName": "Avg Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overall Summary",
+              "displayName": "Overall Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Higher Engagement Topics",
+              "displayName": "Higher Engagement Topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lower Engagement Topics",
+              "displayName": "Lower Engagement Topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Summaries",
+              "displayName": "Video Summaries",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Suggested Topics",
+              "displayName": "Suggested Topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Improvements",
+              "displayName": "Improvements",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "b843767c-f8fd-4e9f-9009-36bf1bef3e35",
+      "name": "Save to Analytics Reports",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Read Video Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Video Performance": {
+      "main": [
+        [
+          {
+            "node": "Read Video Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Video Ideas": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Generate Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Insights",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Insights",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Insights": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Save to Analytics Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "baaa1551-51fb-4c7e-9c2e-ab29e09e2cae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "fHy7ABjtT5NQEN0m",
+  "tags": []
+}

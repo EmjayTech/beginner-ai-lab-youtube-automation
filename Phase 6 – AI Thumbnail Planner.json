@@ -1,0 +1,547 @@
+{
+  "name": "Phase 6 – AI Thumbnail Planner",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "19e15922-f84a-4ca9-bc89-0f3b4cb67fce",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "21356a41-6cdc-4b7b-9062-6d377ed5f6d6",
+              "name": "selected_ids",
+              "value": "VID-009,VID-010,VID-011,VID-012,VID-013",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "469d3899-6f7b-481f-823b-a28a72810387",
+      "name": "Set Selected Videos"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1246251415,
+          "mode": "list",
+          "cachedResultName": "Publishing Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1246251415"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "62d5f598-c4a6-4fa0-a156-846c85737139",
+      "name": "Read Publishing Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $('Set Selected Videos').first().json.selected_ids\n  .split(',').map(s => s.trim()).filter(Boolean);\n\nconst rows = $('Read Publishing Data').all().map(i => i.json);\n\nconst out = [];\nfor (const id of ids) {\n  // if a video was processed more than once, take the latest row\n  const row = [...rows].reverse().find(r => r['Video ID'] === id);\n  if (!row || !row['Recommended Title']) continue;\n  out.push({ json: row });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -16
+      ],
+      "id": "c30f6cad-5bde-4ea9-929e-b97759db365e",
+      "name": "Select Videos"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a thumbnail designer for a fictional beginner-focused YouTube channel called \"Beginner AI Lab\".\nStyle: clean, friendly, high contrast, easy to read on a phone. Audience: students and beginners.\n\nCreate a thumbnail plan for this video.\n\nTitle: {{ $json['Recommended Title'] }}\nSummary: {{ $json['Summary'] }}\n\nProvide:\n- concept: one sentence describing the thumbnail idea\n- thumbnail_text: 2 to 4 words of large, readable text. It must match the video and not promise anything the video does not cover\n- visual_description: 2 to 4 sentences describing exactly what appears (main subject, background, colours, where the text sits, what is in the foreground)\n- image_prompt: a single detailed prompt for an AI image generator, 16:9 widescreen, that includes the style, subject, background, colour palette and \"empty space on one side for text\". Do not ask the image tool to render text\n- visual_assets_needed: 3 to 5 other visual assets the video will need (for example screen recordings, simple diagrams, icons, b-roll ideas)\n\nRules:\n- No real brand logos, product logos, app icons or named AI products (do not show the logo of any AI tool).\n- No copyrighted characters, celebrities, real people or real channel names.\n- Use generic, original visuals only, such as a friendly robot made of simple shapes, a laptop, a lightbulb, a notebook or abstract shapes.\n- No clickbait, fake numbers or exaggerated claims in the text.\n\nReturn only the structured data.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "00114a02-7a58-4093-b7f0-e660090e2066",
+      "name": "Generate Thumbnail Plan",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        224
+      ],
+      "id": "30dfd9a1-310b-4047-bbbc-a910c869c75b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OqfcnzcL8nOwNYa4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"concept\": \"A friendly simple robot beside a glowing lightbulb to show AI made easy.\",\n  \"thumbnail_text\": \"AI MADE SIMPLE\",\n  \"visual_description\": \"A flat-style friendly robot made of rounded shapes stands on the right. A large lightbulb glows beside it. The background is a clean blue gradient with empty space on the left for bold text.\",\n  \"image_prompt\": \"Flat vector illustration, friendly small robot made of simple rounded shapes, glowing lightbulb, clean blue and yellow palette, soft gradient background, empty space on the left side for text, 16:9 widescreen, no text, no logos\",\n  \"visual_assets_needed\": [\"Screen recording of a chat tool\", \"Simple diagram of how AI learns\", \"Lightbulb icon\", \"Notebook b-roll\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "aad44f9c-4715-4001-b744-8fd438c00734",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const videos = $('Select Videos').all();\nconst today = $now.toFormat('yyyy-MM-dd');\n\nconst bullets = (arr) =>\n  Array.isArray(arr) ? arr.map(x => '• ' + x).join('\\n') : String(arr || '');\n\nreturn $input.all().map((item, i) => {\n  const out = item.json.output;\n  const v = videos[i].json;\n  return {\n    json: {\n      'Video ID': v['Video ID'],\n      'Title': v['Recommended Title'],\n      'Concept': out.concept,\n      'Thumbnail Text': String(out.thumbnail_text || '').toUpperCase(),\n      'Visual Description': out.visual_description,\n      'Image Prompt': out.image_prompt,\n      'Visual Assets Needed': bullets(out.visual_assets_needed),\n      'Thumbnail Status': 'Concept Ready',\n      'Date Created': today\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -16
+      ],
+      "id": "17196626-0527-47c9-b484-b3535ab05704",
+      "name": "Format Thumbnail Rows"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 568388382,
+          "mode": "list",
+          "cachedResultName": "Thumbnails",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=568388382"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Concept",
+              "displayName": "Concept",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail Text",
+              "displayName": "Thumbnail Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Visual Description",
+              "displayName": "Visual Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Prompt",
+              "displayName": "Image Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Visual Assets Needed",
+              "displayName": "Visual Assets Needed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail URL",
+              "displayName": "Thumbnail URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail Status",
+              "displayName": "Thumbnail Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Created",
+              "displayName": "Date Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1472,
+        -16
+      ],
+      "id": "18cb205b-c2c3-4e97-a74c-2f1203e04f49",
+      "name": "Save Thumbnail Plan",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 11738224,
+          "mode": "list",
+          "cachedResultName": "Content Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=11738224"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Title",
+              "displayName": "Video Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail Status",
+              "displayName": "Thumbnail Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        -16
+      ],
+      "id": "a0f70e37-b847-4e70-bd66-f092e5883124",
+      "name": "Update Content Calendar",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "874038ff-6556-4675-a941-a2ce78fadeb4",
+              "name": "Video ID",
+              "value": "={{ $json['Video ID'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f3f51a15-c705-4471-8b8e-6e7cb1584c07",
+              "name": "Title",
+              "value": "={{ $json['Title'] }}",
+              "type": "string"
+            },
+            {
+              "id": "b627c4fe-1306-4371-ba8d-5fe6f64fd312",
+              "name": "Thumbnail Status",
+              "value": "={{ $json['Thumbnail Status'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1696,
+        -16
+      ],
+      "id": "77a9fc7a-073d-4ad4-beeb-2bd9fad11167",
+      "name": "Prepare Calendar Update"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Set Selected Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Selected Videos": {
+      "main": [
+        [
+          {
+            "node": "Read Publishing Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Publishing Data": {
+      "main": [
+        [
+          {
+            "node": "Select Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Videos": {
+      "main": [
+        [
+          {
+            "node": "Generate Thumbnail Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Thumbnail Plan",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Thumbnail Plan",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Thumbnail Plan": {
+      "main": [
+        [
+          {
+            "node": "Format Thumbnail Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Thumbnail Rows": {
+      "main": [
+        [
+          {
+            "node": "Save Thumbnail Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Thumbnail Plan": {
+      "main": [
+        [
+          {
+            "node": "Prepare Calendar Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Calendar Update": {
+      "main": [
+        [
+          {
+            "node": "Update Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8ac04b4e-ef4d-46b6-b5dd-4101dcf049ee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "0ZXjQnJ6qY3ou1Dp",
+  "tags": []
+}

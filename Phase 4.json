@@ -1,0 +1,416 @@
+{
+  "name": "Phase 4",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "997b6e7d-93c9-44f6-82a7-40ba5c66f3bf",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9576278e-27c6-4f78-8d6b-3833a4297173",
+              "name": "selected_ids",
+              "value": "VID-009,VID-010,VID-011,VID-012,VID-013",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ad66f1ed-16f4-4761-9a85-fd2504f60548",
+      "name": "Set Selected Videos"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Video Ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "49f6b683-b397-4a32-81b1-92815fc9029e",
+      "name": "Read Video Ideas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1492571919,
+          "mode": "list",
+          "cachedResultName": "Content Research",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1492571919"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "5b40c7a2-7f5c-4026-8f6c-b3281cf2726b",
+      "name": "Read Content Research",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $('Set Selected Videos').first().json.selected_ids\n  .split(',').map(s => s.trim()).filter(Boolean);\n\nconst ideas = $('Read Video Ideas').all().map(i => i.json);\nconst research = $('Read Content Research').all().map(i => i.json);\n\nconst out = [];\nfor (const id of ids) {\n  const idea = ideas.find(r => r['Video ID'] === id);\n  // if a video was researched more than once, take the latest row\n  const plan = [...research].reverse().find(r => r['Video ID'] === id);\n  if (!idea || !plan) continue; // skip IDs with no idea or no research\n  out.push({ json: { ...idea, research: plan } });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "a8c50b43-15a7-4709-98e6-ca9e6f4ec948",
+      "name": "Select and Combine"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a scriptwriter for a fictional beginner-focused YouTube channel called \"Beginner AI Lab\".\nTone: friendly, simple, practical and jargon-free. Write for students and beginners with no technical background.\n\nWrite a complete YouTube script for this video.\n\nTitle: {{ $json['Title'] }}\nCategory: {{ $json['Category'] }}\nTarget audience: {{ $json['Target Audience'] }}\n\nRESEARCH PLAN (use only this material):\nLearning goal: {{ $json.research['Learning Goal'] }}\nMain points: {{ $json.research['Main Points'] }}\nViewer questions: {{ $json.research['Viewer Questions'] }}\nIntro idea: {{ $json.research['Intro'] }}\nMain content plan: {{ $json.research['Main Content'] }}\nExamples: {{ $json.research['Examples'] }}\nConclusion idea: {{ $json.research['Conclusion'] }}\nItems to verify: {{ $json.research['To Verify'] }}\n\nWrite:\n- hook: an interesting opening (2 to 4 sentences) that explains why viewers should keep watching\n- script: the full spoken script, in this order:\n  1. HOOK\n  2. MAIN CONTENT, divided into clearly labelled sections (SECTION 1, SECTION 2 ...) covering the main points, with a simple example where useful\n  3. CONCLUSION: short recap\n  4. CALL TO ACTION\n- call_to_action: one natural sentence asking viewers to subscribe or watch another video\n\nRules:\n- Use short, simple sentences that are easy to say out loud.\n- Use ONLY information from the research plan. Do not invent statistics, prices, product features or claims.\n- For anything listed under \"Items to verify\", do not state it as fact. Write [VERIFY: short note] instead.\n- Do not use real logos, real channel names or copyrighted content.\n- Aim for about 400 to 600 words.\n\nReturn only the structured data.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "6ac56fb6-1168-4054-b76d-f2d8d15351b0",
+      "name": "Generate Script",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.6
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        240
+      ],
+      "id": "d926c1b9-abcf-4d84-b743-449c4caa903d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OqfcnzcL8nOwNYa4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"hook\": \"Ever asked an AI a question and got a useless answer? Stay with me, because in the next five minutes you will fix that.\",\n  \"script\": \"HOOK\\n...\\n\\nSECTION 1: ...\\n...\\n\\nCONCLUSION\\n...\\n\\nCALL TO ACTION\\n...\",\n  \"call_to_action\": \"If this helped, subscribe and watch our next video on writing better prompts.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        240
+      ],
+      "id": "d662f52e-5b50-440a-8030-b463a1ff26f7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Select and Combine').all();\nconst today = $now.toFormat('yyyy-MM-dd');\n\nreturn $input.all().map((item, i) => {\n  const out = item.json.output;\n  const idea = items[i].json;\n  const script = out.script || '';\n  return {\n    json: {\n      'Video ID': idea['Video ID'],\n      'Title': idea['Title'],\n      'Hook': out.hook,\n      'Script': script,\n      'Call To Action': out.call_to_action,\n      'Word Count': script.trim().split(/\\s+/).length,\n      'Status': 'Script Ready',\n      'Date Created': today\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "dc8e34d0-d9c3-4d39-b8fc-0a3591196f06",
+      "name": "Format Script Rows"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1619617689,
+          "mode": "list",
+          "cachedResultName": "Scripts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1619617689"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hook",
+              "displayName": "Hook",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Script",
+              "displayName": "Script",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call To Action",
+              "displayName": "Call To Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Word Count",
+              "displayName": "Word Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Created",
+              "displayName": "Date Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "fd36283d-1de6-4fce-921e-03172e080905",
+      "name": "Save Script to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Set Selected Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Selected Videos": {
+      "main": [
+        [
+          {
+            "node": "Read Video Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Video Ideas": {
+      "main": [
+        [
+          {
+            "node": "Read Content Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Content Research": {
+      "main": [
+        [
+          {
+            "node": "Select and Combine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select and Combine": {
+      "main": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Script": {
+      "main": [
+        [
+          {
+            "node": "Format Script Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Script Rows": {
+      "main": [
+        [
+          {
+            "node": "Save Script to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c63cc95c-321f-4e4f-a23e-b2893333ee4d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "zB2Ogu2t4fEQPxyu",
+  "tags": []
+}

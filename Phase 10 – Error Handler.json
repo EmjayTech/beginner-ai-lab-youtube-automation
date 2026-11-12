@@ -1,0 +1,138 @@
+{
+  "name": "Phase 10 – Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        304
+      ],
+      "id": "744d5957-6fdb-4c96-9fca-7db31583dfe7",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Turn n8n's error data into one readable record\nconst e = $json.execution || {};\nconst w = $json.workflow || {};\nconst err = e.error || {};\nreturn { json: {\n  'Date': $now.toFormat('yyyy-MM-dd HH:mm:ss'),\n  'Workflow': w.name || 'Unknown workflow',\n  'Failed Node': e.lastNodeExecuted || err.node?.name || 'Unknown node',\n  'Error Message': String(err.message || 'No message').slice(0, 500),\n  'Execution ID': e.id || '',\n  'Execution URL': e.url || '',\n  'Mode': e.mode || '',\n  'Status': 'New'\n}};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        304
+      ],
+      "id": "3f18e2e6-0810-4935-9b74-691e062d8d79",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Error Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        208
+      ],
+      "id": "eb83af95-64d2-4c1e-ae3e-c7d69abad779",
+      "name": "Log Error to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "sannioladayo16@gmail.com",
+        "subject": "=FAILED: {{ $json['Workflow'] }} at {{ $json['Failed Node'] }}",
+        "emailType": "text",
+        "message": "=A workflow failed.\n\nWorkflow: {{ $json['Workflow'] }}\nFailed node: {{ $json['Failed Node'] }}\nError: {{ $json['Error Message'] }}\nTime: {{ $json['Date'] }}\nExecution: {{ $json['Execution URL'] }}\n\nThis is an automated alert from the Beginner AI Lab error handler (test project).",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        400
+      ],
+      "id": "045b3d67-d2b1-497c-a349-5fb351afd45c",
+      "name": "Send Failure Alert",
+      "webhookId": "54f824c1-3db2-4f88-bd24-a406367703b6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "I3gYNlNLDOppFQcG",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a5ed054c-5d51-48fb-bce4-f8f2d42eb493",
+  "meta": {
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "3UrSxMJcKapAXrfS",
+  "tags": []
+}

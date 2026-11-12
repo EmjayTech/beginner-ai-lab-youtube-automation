@@ -1,0 +1,374 @@
+{
+  "name": "Phase 7 – Content Calendar Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "13d630f4-30fa-4ff7-8a44-c0b43e94425a",
+      "name": "Start Manually"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 11738224,
+          "mode": "list",
+          "cachedResultName": "Content Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=11738224"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "b2d03e1e-fe57-4ef5-ac2c-eb631aaf8c48",
+      "name": "Read Content Calendar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1619617689,
+          "mode": "list",
+          "cachedResultName": "Scripts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1619617689"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "f63542be-5e1f-4719-b009-0a005fcc4c92",
+      "name": "Read Scripts",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 568388382,
+          "mode": "list",
+          "cachedResultName": "Thumbnails",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=568388382"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -16
+      ],
+      "id": "558bc64b-c1fc-4935-8b74-db702aa98ab9",
+      "name": "Read Thumbnails",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = DateTime.now().startOf('day');\nconst KEEP = ['Production', 'Published', 'Failed']; // manual statuses, never overwritten\n\nconst clean = (arr) => arr.map(i => i.json).filter(r => r['Video ID']);\nconst calendar = clean($('Read Content Calendar').all());\nconst scripts  = clean($('Read Scripts').all());\nconst thumbs   = clean($('Read Thumbnails').all());\n\n// Videos that have a non-empty script\nconst hasScript = new Set(\n  scripts.filter(r => String(r['Script'] || '').trim()).map(r => r['Video ID'])\n);\n\n// Latest thumbnail row per video\nconst thumbById = {};\nfor (const r of thumbs) thumbById[r['Video ID']] = r;\n\n// One row per video: calendar rows first, then videos that have a script\n// but are not in the calendar yet\nconst byId = {};\nfor (const r of calendar) byId[r['Video ID']] = r;\nfor (const r of scripts) {\n  if (!byId[r['Video ID']]) {\n    byId[r['Video ID']] = { 'Video ID': r['Video ID'], 'Title': r['Title'] || '' };\n  }\n}\nconst rows = Object.values(byId);\n\n// Fictional publish dates continue after the latest existing date\nconst existing = rows\n  .map(r => DateTime.fromISO(String(r['Publish Date'] || '').trim()))\n  .filter(d => d.isValid);\nlet cursor = existing.length ? DateTime.max(...existing) : today.plus({ days: 4 });\nif (cursor < today) cursor = today;\n\nreturn rows.map(r => {\n  const id = r['Video ID'];\n  const old = String(r['Video Status'] || r['Status'] || '').trim();\n\n  const scriptOk = hasScript.has(id);\n  const t = thumbById[id];\n  const thumbOk = !!(t && String(t['Thumbnail URL'] || '').trim());\n\n  const scriptStatus = scriptOk ? 'Script Ready' : 'Script Required';\n  const thumbStatus = thumbOk ? 'Thumbnail Ready' : (t ? 'Concept Ready' : 'Thumbnail Required');\n\n  let videoStatus, note;\n  if (KEEP.includes(old)) {\n    videoStatus = old;\n    note = r['Notes'] || '';\n  } else if (!scriptOk) {\n    videoStatus = 'Script Required';            // Step 5\n    note = 'No script yet';\n  } else if (!thumbOk) {\n    videoStatus = 'Thumbnail Required';         // Step 6\n    note = 'Script ready, thumbnail missing';\n  } else {\n    videoStatus = 'Ready to Publish';           // Step 7\n    note = 'Script and thumbnail ready';\n  }\n\n  let publishDate = String(r['Publish Date'] || '').trim();\n  if (videoStatus === 'Ready to Publish' && !publishDate) {   // Step 8\n    cursor = cursor.plus({ days: 3 });\n    publishDate = cursor.toFormat('yyyy-MM-dd');\n  }\n\n  return {\n    json: {\n      'Video ID': id,\n      'Title': r['Title'] || r['Video Title'] || '',\n      'Script Status': scriptStatus,\n      'Thumbnail Status': thumbStatus,\n      'Video Status': videoStatus,\n      'Publish Date': publishDate,\n      'Notes': KEEP.includes(old) ? note : `Auto-check ${today.toFormat('yyyy-MM-dd')}: ${note}`\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "ef73d905-4516-4237-b2ef-63a9ece32efc",
+      "name": "Check Video Status"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 11738224,
+          "mode": "list",
+          "cachedResultName": "Content Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=11738224"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Script Status",
+              "displayName": "Script Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thumbnail Status",
+              "displayName": "Thumbnail Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Status",
+              "displayName": "Video Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        -16
+      ],
+      "id": "5586a9d5-2d03-404e-8755-cdc2d44c9e4c",
+      "name": "Update Content Calendar",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Status BEFORE this run (the calendar was read before it was updated)\nconst before = {};\nfor (const i of $('Read Content Calendar').all()) {\n  const r = i.json;\n  if (r['Video ID']) before[r['Video ID']] = String(r['Video Status'] || r['Status'] || '').trim();\n}\n\n// Keep only videos that are ready now but were not ready before\nreturn $('Check Video Status').all().filter(i =>\n  i.json['Video Status'] === 'Ready to Publish' &&\n  before[i.json['Video ID']] !== 'Ready to Publish'\n);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -16
+      ],
+      "id": "44e91f8f-7c61-4e21-b932-fb660fa5eb83",
+      "name": "Find Newly Ready"
+    },
+    {
+      "parameters": {
+        "sendTo": "sannioladayo16@gmail.com",
+        "subject": "=Ready to Publish: {{ $json['Title'] }} ({{ $json['Video ID'] }})",
+        "emailType": "text",
+        "message": "=Hi,\n\nYour video is ready to publish.\n\nVideo ID: {{ $json['Video ID'] }}\nTitle: {{ $json['Title'] }}\nScript: {{ $json['Script Status'] }}\nThumbnail: {{ $json['Thumbnail Status'] }}\nPlanned publish date (fictional): {{ $json['Publish Date'] }}\n\nThis is an automated reminder from the Beginner AI Lab content calendar (test project).",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        -16
+      ],
+      "id": "a3e7ed44-c99d-4640-8674-6efef57ec86e",
+      "name": "Send Reminder Email",
+      "webhookId": "0be55e0c-3499-44e1-8070-4c585f7d5bcd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "I3gYNlNLDOppFQcG",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Manually": {
+      "main": [
+        [
+          {
+            "node": "Read Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Read Scripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Scripts": {
+      "main": [
+        [
+          {
+            "node": "Read Thumbnails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Thumbnails": {
+      "main": [
+        [
+          {
+            "node": "Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Video Status": {
+      "main": [
+        [
+          {
+            "node": "Update Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Find Newly Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Newly Ready": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0b5c4a4e-2089-4c2d-9bfa-d4fa62037814",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "6HVj6Twd2D03wxen",
+  "tags": []
+}

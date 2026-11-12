@@ -1,0 +1,2 @@
+Date,Workflow,Failed Node,Error Message,Execution ID,Execution URL,Mode,Status
+2026-11-12 17:15:16,Example Workflow,Node With Error,Example Error Message,231,http://localhost:5678/execution/workflow/1/231,manual,New

@@ -1,0 +1,496 @@
+{
+  "name": "Phase 10 – Bulk Publishing Data",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1619617689,
+          "mode": "list",
+          "cachedResultName": "Scripts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1619617689"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        1152
+      ],
+      "id": "cf17b31a-8bd1-40eb-8217-d67ffbe8c830",
+      "name": "Read Scripts",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1246251415,
+          "mode": "list",
+          "cachedResultName": "Publishing Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1246251415"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2272,
+        1152
+      ],
+      "id": "69ac8df6-5d1e-4695-80be-71678e169fbf",
+      "name": "Read Existing Publishing Data",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Videos that have a script but no Publishing Data row yet\nconst done = new Set($('Read Existing Publishing Data').all().map(i => i.json['Video ID']).filter(Boolean));\nconst seen = new Set();\nconst out = [];\nfor (const item of $('Read Scripts').all()) {\n  const id = item.json['Video ID'];\n  if (!id || !item.json['Script'] || done.has(id) || seen.has(id)) continue;\n  seen.add(id);\n  out.push({ json: item.json });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        1152
+      ],
+      "id": "ab15b825-1fdd-4654-85ed-f17d81500f12",
+      "name": "Select Videos For Publishing Data"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $input.item.json };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        1024
+      ],
+      "id": "26e86937-dbb9-4a14-84af-6566f493fabd",
+      "name": "Prepare Publishing Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a YouTube publishing specialist for a fictional beginner-focused channel called \"Beginner AI Lab\".\nTone: clear, friendly and honest. Audience: students and beginners.\n\nCreate the publishing information for this video, based ONLY on the script below.\n\nWorking title: {{ $json['Title'] }}\n\nSCRIPT:\n{{ $json['Script'] }}\n\nProvide:\n- title_options: exactly 5 different YouTube titles. Each must be clear, relevant to what the video really covers, and under 70 characters.\n- recommended_title: the best one of the five (copy it exactly)\n- title_reason: one sentence explaining why it fits the video's actual content\n- description: a YouTube description of 80 to 150 words. First 2 sentences should summarize the video and make viewers want to watch. Include a natural call to action to subscribe. No links.\n- tags: 10 to 15 relevant keywords or short phrases\n- summary: a 2 to 3 sentence summary of the video\n- chapters: one short chapter title for EACH script section, in the same order as the script (HOOK, each SECTION, CONCLUSION, CALL TO ACTION). Use 2 to 5 words each.\n\nRules:\n- Use only what is in the script. Do not invent statistics, prices, results or product features.\n- No clickbait or exaggerated promises (avoid words like \"ultimate\", \"guaranteed\", \"secret\", \"shocking\" unless the script supports them).\n- Do not use real logos, real channel names or copyrighted content.\n- Keep any [VERIFY] items out of the title and description. Do not state them as facts.\n\nReturn only the structured data.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        3168,
+        1024
+      ],
+      "id": "56b752b3-72b3-478b-bea2-a2e67290a496",
+      "name": "Generate Publishing Data",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src = $('Prepare Publishing Input').item.json;\nconst out = $json.output;\nconst WPM = 150;\n\nconst fmt = (secs) => {\n  const m = Math.floor(secs / 60);\n  const s = Math.round(secs % 60);\n  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;\n};\nconst sectionWords = (script) => {\n  const header = /^(HOOK|SECTION\\s*\\d+.*|CONCLUSION|CALL TO ACTION)\\s*$/i;\n  const sections = [];\n  for (const line of String(script).split('\\n')) {\n    if (header.test(line.trim())) { sections.push(0); continue; }\n    if (sections.length) sections[sections.length - 1] += line.trim().split(/\\s+/).filter(Boolean).length;\n  }\n  return sections;\n};\n\nconst chapters = out.chapters || [];\nlet words = sectionWords(src['Script']);\nif (words.length !== chapters.length) {\n  const total = String(src['Script']).trim().split(/\\s+/).length;\n  words = chapters.map(() => total / Math.max(chapters.length, 1));\n}\nlet secs = 0;\nconst chapterLines = chapters.map((title, idx) => {\n  const line = `${fmt(secs)} ${title}`;\n  secs += (words[idx] / WPM) * 60;\n  return line;\n});\n\nreturn { json: {\n  'Video ID': src['Video ID'],\n  'Original Title': src['Title'],\n  'Title Options': (out.title_options || []).map((t, n) => `${n + 1}. ${t}`).join('\\n'),\n  'Recommended Title': out.recommended_title,\n  'Title Reason': out.title_reason,\n  'Description': out.description,\n  'Tags': (out.tags || []).join(', '),\n  'Summary': out.summary,\n  'Chapters': chapterLines.join('\\n') + '\\n(estimated timestamps)',\n  'Status': 'Publishing Data Ready',\n  'Date Created': $now.toFormat('yyyy-MM-dd')\n}};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        1024
+      ],
+      "id": "56f78d8b-ce2e-41fd-ae56-c48ed9d732ed",
+      "name": "Format Publishing Rows"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1246251415,
+          "mode": "list",
+          "cachedResultName": "Publishing Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit#gid=1246251415"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Original Title",
+              "displayName": "Original Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title Options",
+              "displayName": "Title Options",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Title",
+              "displayName": "Recommended Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title Reason",
+              "displayName": "Title Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tags",
+              "displayName": "Tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Chapters",
+              "displayName": "Chapters",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Created",
+              "displayName": "Date Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3744,
+        1024
+      ],
+      "id": "82ec159a-9717-4645-9c49-96169d7c26d8",
+      "name": "Save Publishing Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2720,
+        1152
+      ],
+      "id": "377aa30b-c4da-49a7-82ea-6ca61208c816",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        3176,
+        1256
+      ],
+      "id": "cf3a91cd-8ff2-4c2c-9884-c5498bb38583",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dE2ub8AsqMKUVGzE",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title_options\": [\n    \"AI for Beginners: What It Is and How It Works\",\n    \"What Is AI? A Simple Guide for Beginners\",\n    \"How Does AI Work? Explained Without Jargon\",\n    \"AI Explained Simply: Start Here\",\n    \"Understanding AI: A Beginner's Walkthrough\"\n  ],\n  \"recommended_title\": \"AI for Beginners: What It Is and How It Works\",\n  \"title_reason\": \"It names the exact topic and audience covered in the script.\",\n  \"description\": \"In this video, we explain what AI is in simple language...\",\n  \"tags\": [\"AI for beginners\", \"what is AI\", \"how AI works\", \"AI explained\"],\n  \"summary\": \"A simple introduction to AI for people with no technical background.\",\n  \"chapters\": [\"Intro\", \"What AI is\", \"How AI learns\", \"Everyday examples\", \"Recap\", \"Next steps\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3304,
+        1256
+      ],
+      "id": "ef0aaacf-6c8e-4d97-99e9-800ad826cce8",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "amount": 12
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3968,
+        1152
+      ],
+      "id": "d9074fc3-1606-4f59-8ddd-d04a9ec6cc09",
+      "name": "Wait1",
+      "webhookId": "1790b2d1-ac54-4c66-bdad-bfb73fdf25a6"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        1921.3722126929674,
+        744.7478559176673
+      ],
+      "id": "767db59d-279b-4060-b679-2421a0163498",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read Scripts": {
+      "main": [
+        [
+          {
+            "node": "Read Existing Publishing Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Existing Publishing Data": {
+      "main": [
+        [
+          {
+            "node": "Select Videos For Publishing Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Videos For Publishing Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Publishing Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Publishing Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Publishing Data": {
+      "main": [
+        [
+          {
+            "node": "Format Publishing Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Publishing Rows": {
+      "main": [
+        [
+          {
+            "node": "Save Publishing Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Publishing Data": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare Publishing Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Publishing Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Publishing Data",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read Scripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "828e900a-a77e-4f7e-8822-781dffae6979",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4d93e76da1713264a682c90abe7737f9836aa10f44199cd607254f2985be2bf"
+  },
+  "nodeGroups": [],
+  "id": "uifCy5eZ5XKvB0tm",
+  "tags": []
+}

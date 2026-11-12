@@ -1,0 +1,146 @@
+{
+  "name": "Phase 10 – Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Phase 10 – Error Handler\nRuns automatically when any workflow that has this set as its **Error Workflow** fails. Logs the failure to the **Error Log** sheet (Date, Workflow, Failed Node, Error Message, Execution ID, Execution URL, Mode, Status) and emails an alert to the test account.",
+        "height": 180,
+        "width": 640,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        -300
+      ],
+      "id": "963a7ee8-0df0-4bac-bf0e-e6e7743be142",
+      "name": "Sticky – Note"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        0
+      ],
+      "id": "c79a9c2d-ba09-49ab-800d-9b8b148b7e00",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Turn n8n's error data into one readable record\nconst e = $json.execution || {};\nconst w = $json.workflow || {};\nconst err = e.error || {};\nreturn { json: {\n  'Date': $now.toFormat('yyyy-MM-dd HH:mm:ss'),\n  'Workflow': w.name || 'Unknown workflow',\n  'Failed Node': e.lastNodeExecuted || err.node?.name || 'Unknown node',\n  'Error Message': String(err.message || 'No message').slice(0, 500),\n  'Execution ID': e.id || '',\n  'Execution URL': e.url || '',\n  'Mode': e.mode || '',\n  'Status': 'New'\n}};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "3544a923-8b9e-4b3a-854b-5b2e9feba2d2",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM",
+          "mode": "list",
+          "cachedResultName": "YouTube Automation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10RDkM285N5yxlNeLL9lWtPBFjTDhkSneitOev6ov3LM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Error Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        150,
+        -100
+      ],
+      "id": "b71d2f9e-099e-4f6a-ba5c-5169686f8925",
+      "name": "Log Error to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9FrsyyesNoTFb86y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "sannioladayo16@gmail.com",
+        "subject": "=FAILED: {{ $json['Workflow'] }} at {{ $json['Failed Node'] }}",
+        "emailType": "text",
+        "message": "=A workflow failed.\n\nWorkflow: {{ $json['Workflow'] }}\nFailed node: {{ $json['Failed Node'] }}\nError: {{ $json['Error Message'] }}\nTime: {{ $json['Date'] }}\nExecution: {{ $json['Execution URL'] }}\n\nThis is an automated alert from the Beginner AI Lab error handler (test project).",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        150,
+        100
+      ],
+      "id": "49aab412-006d-4bd8-bf24-7f4a8c602676",
+      "name": "Send Failure Alert",
+      "webhookId": "54f824c1-3db2-4f88-bd24-a406367703b6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "I3gYNlNLDOppFQcG",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
